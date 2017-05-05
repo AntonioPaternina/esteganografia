@@ -1,8 +1,12 @@
 package co.edu.poli.seguridad.informacion.esteganografia.utilidades;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.Conversion;
+import org.apache.sanselan.ImageFormat;
+import org.apache.sanselan.ImageReadException;
+import org.apache.sanselan.ImageWriteException;
+import org.apache.sanselan.Sanselan;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -15,35 +19,36 @@ public class EscritorDeMensajes {
 
     public static final String FORMATO_IMAGEN = "png";
     public static final int BITS_LONGITUD_MENSAJE = 32;
-    public static final int FILA_PARA_LONGITUD_MENSAJE = 0;
-    public static final int FILA_INICIAL_PARA_MENSAJE = 1;
+    public static final int COLUMNA_PARA_LONGITUD_MENSAJE = 0;
+    public static final int COLUMNA_INICIAL_PARA_MENSAJE = 1;
     public static final int BITS_EN_BYTE = 8;
+    public static final String SUFIJO_ARCHIVO_MODIFICADO = "-modificado";
 
-    private BufferedImage imagenModificada;
     private BufferedImage imagenOriginal;
-    private File archivoImagen;
+    private File archivoOriginal;
+    private BufferedImage imagenModificada;
+    private File archivoModificado;
     private int pixeles[][];
     private char caracteresMensaje[];
+    private boolean caracterEnBinario[];
     private int anchoImagen;
     private int altoImagen;
-    private boolean longitudMensajeEnBinario[];
-    private boolean caracterEnBinario[];
     private int longitudMensaje;
+    private boolean longitudMensajeEnBinario[];
 
-    public void ocultarMensajeEnImagen(String rutaImagen, String mensaje) throws IOException {
-        String mensajePreprocesado = preprocesarMensaje(mensaje);
-
+    public void ocultarMensajeEnImagen(String rutaImagen, String mensaje) throws IOException, ImageReadException,
+            ImageWriteException {
         cargarImagenEnMemoria(rutaImagen);
 
-        guardarLongitudDelMensajeEnImagen(mensajePreprocesado);
+        guardarLongitudDelMensajeEnImagen(mensaje);
 
-        guardarMensajeEnImagen(mensajePreprocesado);
+        guardarMensajeEnImagen(mensaje);
 
         actualizarImagenEnDisco();
     }
 
-    private void actualizarImagenEnDisco() throws IOException {
-        ImageIO.write(this.imagenModificada, FORMATO_IMAGEN, this.archivoImagen);
+    private void actualizarImagenEnDisco() throws IOException, ImageWriteException {
+        Sanselan.writeImage(this.imagenModificada, this.archivoModificado, ImageFormat.IMAGE_FORMAT_PNG, null);
     }
 
     private void guardarMensajeEnImagen(String mensaje) {
@@ -58,10 +63,13 @@ public class EscritorDeMensajes {
         ocultarLongitudEnPixeles();
     }
 
-    private void cargarImagenEnMemoria(String rutaImagen) throws IOException {
-        this.archivoImagen = new File(rutaImagen);
+    private void cargarImagenEnMemoria(String rutaImagen) throws IOException, ImageReadException {
+        this.archivoOriginal = new File(rutaImagen);
+        String ruta = this.archivoOriginal.getPath();
+        this.archivoModificado = new File(FilenameUtils.getFullPath(ruta) + FilenameUtils.getBaseName(ruta) +
+                SUFIJO_ARCHIVO_MODIFICADO + "." + FORMATO_IMAGEN);
 
-        this.imagenOriginal = ImageIO.read(this.archivoImagen);
+        this.imagenOriginal = Sanselan.getBufferedImage(this.archivoOriginal);
 
         this.imagenModificada = new BufferedImage(this.imagenOriginal.getWidth(), this.imagenOriginal.getHeight(),
                 BufferedImage.TYPE_4BYTE_ABGR);
@@ -71,34 +79,31 @@ public class EscritorDeMensajes {
         this.pixeles = UtilidadesGenerales.calcularMatrizDePixeles(this.imagenOriginal);
     }
 
-    private String preprocesarMensaje(String mensaje) {
-        mensaje += " ";
-        return mensaje;
-    }
-
     private void ocultarMensajeEnPixeles() {
 
         int indiceCaracter = 0;
-        this.caracterEnBinario = codificarCaracterEnBinario((int) this.caracteresMensaje[indiceCaracter++]);
-
         int indiceBitDeCaracter = 0;
-        for (int i = FILA_INICIAL_PARA_MENSAJE; i < this.anchoImagen; i++) {
-            for (int j = 0; j < this.altoImagen; j++) {
+        this.caracterEnBinario = codificarCaracterEnBinario((int) this.caracteresMensaje[indiceCaracter]);
+
+        for (int i = COLUMNA_INICIAL_PARA_MENSAJE; i < this.anchoImagen && indiceCaracter < this
+                .caracteresMensaje.length; i++) {
+            for (int j = 0; j < this.altoImagen && indiceCaracter < this
+                    .caracteresMensaje.length; j++) {
                 for (int k = 0; k < MASCARAS_BITS_MENOS_SIGNIFICATIVOS.length && indiceCaracter < this
                         .caracteresMensaje.length; k++) {
 
                     int mascara = MASCARAS_BITS_MENOS_SIGNIFICATIVOS[k];
 
-                    boolean bit = caracterEnBinario[indiceBitDeCaracter];
+                    boolean bit = caracterEnBinario[indiceBitDeCaracter++];
                     settearBitEnPixel(bit, i, j, mascara);
-
-                    indiceBitDeCaracter++;
 
                     if (indiceBitDeCaracter == BITS_EN_BYTE) {
                         indiceBitDeCaracter = 0;
-                        this.caracterEnBinario = codificarCaracterEnBinario((int) this
-                                .caracteresMensaje[indiceCaracter]);
                         indiceCaracter++;
+                        if (indiceCaracter < this.caracteresMensaje.length) {
+                            this.caracterEnBinario = codificarCaracterEnBinario((int) this
+                                    .caracteresMensaje[indiceCaracter]);
+                        }
                     }
                 }
             }
@@ -118,7 +123,8 @@ public class EscritorDeMensajes {
     private void actualizarMatrizPixeles() {
         for (int i = 0; i < this.anchoImagen; i++) {
             for (int j = 0; j < this.altoImagen; j++) {
-                this.imagenModificada.setRGB(i, j, this.pixeles[i][j]);
+                int nuevoPixel = this.pixeles[i][j];
+                this.imagenModificada.setRGB(i, j, nuevoPixel);
             }
         }
     }
@@ -141,7 +147,7 @@ public class EscritorDeMensajes {
                 boolean bit = this.longitudMensajeEnBinario[indiceBitEnMensaje];
                 int mascaraBitsPorModificar = MASCARAS_BITS_MENOS_SIGNIFICATIVOS[k];
 
-                settearBitEnPixel(bit, FILA_PARA_LONGITUD_MENSAJE, j, mascaraBitsPorModificar);
+                settearBitEnPixel(bit, COLUMNA_PARA_LONGITUD_MENSAJE, j, mascaraBitsPorModificar);
 
                 indiceBitEnMensaje++;
             }

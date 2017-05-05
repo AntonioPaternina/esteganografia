@@ -6,7 +6,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.BitSet;
 
 import static co.edu.poli.seguridad.informacion.esteganografia.utilidades.EscritorDeMensajes.*;
 import static co.edu.poli.seguridad.informacion.esteganografia.utilidades.UtilidadesGenerales
@@ -42,7 +41,7 @@ public class LectorDeMensajes {
         boolean[] caracterTemp = new boolean[BITS_EN_BYTE];
         int contadorByteTemp = 0;
 
-        for (int i = FILA_INICIAL_PARA_MENSAJE; i < imagen.getWidth(); i++) {
+        for (int i = COLUMNA_INICIAL_PARA_MENSAJE; i < imagen.getWidth(); i++) {
             for (int j = 0; j < imagen.getHeight(); j++) {
                 for (int k = 0; k < MASCARAS_BITS_MENOS_SIGNIFICATIVOS.length; k++) {
                     if (mensajeEnTextoPlano.length() < longitudMensaje) {
@@ -86,7 +85,7 @@ public class LectorDeMensajes {
             for (int k = 0; k < MASCARAS_BITS_MENOS_SIGNIFICATIVOS.length; k++) {
 
                 int mascaraDeModificacion = MASCARAS_BITS_MENOS_SIGNIFICATIVOS[k];
-                int pixel = pixeles[FILA_PARA_LONGITUD_MENSAJE][j];
+                int pixel = pixeles[COLUMNA_PARA_LONGITUD_MENSAJE][j];
 
                 if ((pixel & mascaraDeModificacion) != 0) {
                     longitudDelMensaje[indiceBitLongitudMensaje] = true;
