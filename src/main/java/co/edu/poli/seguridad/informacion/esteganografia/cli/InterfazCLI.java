@@ -14,8 +14,6 @@ import java.io.PrintWriter;
 
 public class InterfazCLI {
 
-    private static Logger logger = LoggerFactory.getLogger(InterfazCLI.class.getName());
-
     public static void main(String args[]) throws ParseException, IOException, ImageWriteException, ImageReadException {
         Options opciones = construirOpciones();
         CommandLineParser commandLineParser = new DefaultParser();
@@ -35,15 +33,15 @@ public class InterfazCLI {
             EscritorDeMensajes escritorDeMensajes = new EscritorDeMensajes();
             escritorDeMensajes.ocultarMensajeEnImagen(rutaImagen, mensaje);
 
-            logger.info("se ha ocultado el mensaje correctamente");
+            System.out.println("se ha ocultado el mensaje correctamente");
         }
 
         if (commandLine.hasOption("l")) {
             LectorDeMensajes lectorDeMensajes = new LectorDeMensajes();
             String mensaje = lectorDeMensajes.leerMensajeOculto(rutaImagen);
 
-            logger.info("el mensaje oculto es:");
-            logger.info(mensaje);
+            System.out.println("el mensaje oculto es:");
+            System.out.println(mensaje);
         }
     }
 
